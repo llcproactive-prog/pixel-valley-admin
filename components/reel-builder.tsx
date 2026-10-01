@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { BRAND, MARK_COLORS, MARK_GRID, STRIP } from "@/lib/brand";
+import { BRAND, LOGO, STRIP_COLORS } from "@/lib/brand";
 
 type ReelPhoto = { id: string; url: string | null };
 type Format = "story" | "square" | "wide";
@@ -39,33 +39,22 @@ function pickMime() {
 
 const ease = (x: number) => 1 - Math.pow(1 - Math.min(Math.max(x, 0), 1), 3);
 
-function drawMark(ctx: CanvasRenderingContext2D, cx: number, cy: number, size: number, outline: string) {
-  const s = size / 64;
-  ctx.save();
-  ctx.translate(cx - size / 2, cy - size / 2);
-  ctx.scale(s, s);
-  ctx.strokeStyle = outline;
-  ctx.lineWidth = 3.5;
-  ctx.lineJoin = "round";
-  ctx.beginPath();
-  ctx.moveTo(32, 4); ctx.lineTo(60, 24); ctx.lineTo(60, 30); ctx.lineTo(54, 30); ctx.lineTo(54, 58);
-  ctx.lineTo(10, 58); ctx.lineTo(10, 30); ctx.lineTo(4, 30); ctx.lineTo(4, 24); ctx.closePath();
-  ctx.stroke();
-  MARK_GRID.forEach((row, r) =>
-    row.forEach((c, i) => {
-      if (!c) return;
-      ctx.fillStyle = MARK_COLORS[c];
-      ctx.fillRect(16 + i * 5.2, 30 + r * 4.4, 4.4, 3.6);
-    }),
-  );
-  ctx.restore();
+type Logos = { full: HTMLImageElement; mark: HTMLImageElement };
+
+function drawLogo(ctx: CanvasRenderingContext2D, img: HTMLImageElement | undefined, cx: number, cy: number, width: number) {
+  if (!img) return 0;
+  const height = (img.height / img.width) * width;
+  ctx.drawImage(img, cx - width / 2, cy - height / 2, width, height);
+  return height;
 }
 
 function drawStrip(ctx: CanvasRenderingContext2D, y: number, w: number, h: number) {
   const cells = 48;
   const cw = w / cells;
   for (let i = 0; i < cells; i++) {
-    ctx.fillStyle = MARK_COLORS[STRIP[i % STRIP.length]];
+    const band = Math.min(Math.floor((i / cells) * 3), 2);
+    const scatter = (i * 7) % 11 === 0 && band > 0 ? band - 1 : band;
+    ctx.fillStyle = STRIP_COLORS[scatter];
     ctx.fillRect(i * cw, y, Math.ceil(cw), h);
   }
 }
@@ -109,6 +98,7 @@ export function ReelBuilder({
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const imagesRef = useRef<Map<string, HTMLImageElement>>(new Map());
+  const logosRef = useRef<Partial<Logos>>({});
   const rafRef = useRef<number | null>(null);
 
   const order = useMemo(() => usable.filter((p) => selected.includes(p.id)).sort((a, b) => selected.indexOf(a.id) - selected.indexOf(b.id)), [usable, selected]);
@@ -120,6 +110,10 @@ export function ReelBuilder({
 
   const ensureImages = useCallback(async () => {
     const missing = order.filter((p) => !imagesRef.current.has(p.id));
+    if (!logosRef.current.full || !logosRef.current.mark) {
+      const [full, mark] = await Promise.all([loadImage(LOGO.full.src), loadImage(LOGO.mark.src)]);
+      logosRef.current = { full, mark };
+    }
     await Promise.all(
       missing.map(async (p) => {
         imagesRef.current.set(p.id, await loadImage(p.url));
@@ -134,8 +128,9 @@ export function ReelBuilder({
       const body = fontVar("--font-inter", "sans-serif");
       const unit = Math.min(w, h) / 1080;
       const pad = 72 * unit;
+      const logos = logosRef.current;
 
-      ctx.fillStyle = BRAND.coastal;
+      ctx.fillStyle = BRAND.white;
       ctx.fillRect(0, 0, w, h);
 
       const photoStart = INTRO;
@@ -163,23 +158,25 @@ export function ReelBuilder({
         const edgeIn = Math.min((t - photoStart + FADE) / FADE, 1);
         const edgeOut = Math.min((photoEnd + FADE - t) / FADE, 1);
         if (edgeIn < 1 || edgeOut < 1) {
-          ctx.fillStyle = BRAND.coastal;
+          ctx.fillStyle = BRAND.white;
           ctx.globalAlpha = 1 - Math.min(edgeIn, edgeOut);
           ctx.fillRect(0, 0, w, h);
           ctx.globalAlpha = 1;
         }
 
         const grad = ctx.createLinearGradient(0, h * 0.62, 0, h);
-        grad.addColorStop(0, "rgba(8,37,65,0)");
-        grad.addColorStop(1, "rgba(8,37,65,0.82)");
+        grad.addColorStop(0, "rgba(7,31,61,0)");
+        grad.addColorStop(1, "rgba(7,31,61,0.82)");
         ctx.fillStyle = grad;
         ctx.fillRect(0, h * 0.6, w, h * 0.4);
 
+        const badgeW = 220 * unit;
+        const badgeH = 130 * unit;
         ctx.fillStyle = BRAND.white;
         ctx.beginPath();
-        ctx.roundRect(pad, pad, 112 * unit, 112 * unit, 20 * unit);
+        ctx.roundRect(pad, pad, badgeW, badgeH, 20 * unit);
         ctx.fill();
-        drawMark(ctx, pad + 56 * unit, pad + 56 * unit, 92 * unit, BRAND.coastal);
+        drawLogo(ctx, logos.mark, pad + badgeW / 2, pad + badgeH / 2, badgeW - 36 * unit);
 
         ctx.textBaseline = "alphabetic";
         ctx.fillStyle = BRAND.mint;
@@ -193,16 +190,16 @@ export function ReelBuilder({
       if (t < INTRO + FADE) {
         const a = t < INTRO ? 1 : 1 - (t - INTRO) / FADE;
         ctx.globalAlpha = a;
-        ctx.fillStyle = BRAND.coastal;
+        ctx.fillStyle = BRAND.white;
         ctx.fillRect(0, 0, w, h);
         const k = ease(t / 0.7);
-        drawMark(ctx, w / 2, h / 2 - 150 * unit, 240 * unit * (0.85 + 0.15 * k), BRAND.white);
+        drawLogo(ctx, logos.mark, w / 2, h / 2 - 170 * unit, 420 * unit * (0.9 + 0.1 * k));
         ctx.textAlign = "center";
-        ctx.fillStyle = BRAND.white;
+        ctx.fillStyle = BRAND.coastal;
         ctx.font = `800 ${72 * unit}px ${heading}`;
         const lines = wrap(ctx, headline || title, w - pad * 2);
         lines.forEach((line, i) => ctx.fillText(line, w / 2, h / 2 + 60 * unit + i * 84 * unit + (1 - k) * 30 * unit));
-        ctx.fillStyle = BRAND.mint;
+        ctx.fillStyle = BRAND.aqua;
         ctx.font = `600 ${32 * unit}px ${body}`;
         ctx.fillText(location.toUpperCase(), w / 2, h / 2 + 90 * unit + lines.length * 84 * unit);
         ctx.textAlign = "left";
@@ -212,23 +209,13 @@ export function ReelBuilder({
       if (t > photoEnd) {
         const a = ease((t - photoEnd) / FADE);
         ctx.globalAlpha = a;
-        ctx.fillStyle = BRAND.coastal;
+        ctx.fillStyle = BRAND.white;
         ctx.fillRect(0, 0, w, h);
-        ctx.fillStyle = BRAND.white;
-        ctx.beginPath();
-        ctx.roundRect(w / 2 - 150 * unit, h / 2 - 330 * unit, 300 * unit, 300 * unit, 48 * unit);
-        ctx.fill();
-        drawMark(ctx, w / 2, h / 2 - 180 * unit, 240 * unit, BRAND.coastal);
+        const logoH = drawLogo(ctx, logos.full, w / 2, h / 2 - 110 * unit, 620 * unit);
         ctx.textAlign = "center";
-        ctx.fillStyle = BRAND.white;
-        ctx.font = `800 ${76 * unit}px ${heading}`;
-        ctx.fillText("Pixel Valley", w / 2, h / 2 + 70 * unit);
-        ctx.fillStyle = BRAND.aqua;
-        ctx.font = `700 ${34 * unit}px ${heading}`;
-        ctx.fillText("PAINTING", w / 2, h / 2 + 125 * unit);
-        ctx.fillStyle = BRAND.white;
-        ctx.font = `500 ${34 * unit}px ${body}`;
-        wrap(ctx, cta, w - pad * 2).forEach((line, i) => ctx.fillText(line, w / 2, h / 2 + 220 * unit + i * 46 * unit));
+        ctx.fillStyle = BRAND.coastal;
+        ctx.font = `600 ${36 * unit}px ${body}`;
+        wrap(ctx, cta, w - pad * 2).forEach((line, i) => ctx.fillText(line, w / 2, h / 2 - 110 * unit + logoH / 2 + 90 * unit + i * 50 * unit));
         ctx.textAlign = "left";
         ctx.globalAlpha = 1;
       }

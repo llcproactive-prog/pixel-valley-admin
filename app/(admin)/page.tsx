@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { requireAdmin } from "@/lib/supabase/server";
 import { StatusPill, fmtDate } from "@/components/status";
-import { PixelMark } from "@/components/brand";
+import { PixelStrip } from "@/components/brand";
 import { BRAND } from "@/lib/brand";
 
 export const metadata = { title: "Dashboard" };
@@ -40,9 +40,8 @@ export default async function Dashboard() {
 
   return (
     <div className="flex flex-col gap-6">
-      <section className="relative overflow-hidden rounded-2xl bg-coastal-700 px-5 py-6 text-white sm:px-8 sm:py-8">
-        <PixelMark className="pointer-events-none absolute -right-6 -bottom-8 h-48 w-48 opacity-15" outline="#ffffff" />
-        <div className="relative flex flex-wrap items-end justify-between gap-5">
+      <section className="overflow-hidden rounded-2xl bg-coastal-700 text-white">
+        <div className="flex flex-wrap items-end justify-between gap-5 px-5 py-6 sm:px-8 sm:py-8">
           <div className="flex flex-col gap-1.5">
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-mint">Pixel Valley Painting</p>
             <h1 className="text-2xl font-bold text-balance sm:text-3xl">{greeting()}, Raymond.</h1>
@@ -59,6 +58,7 @@ export default async function Dashboard() {
             </Link>
           </div>
         </div>
+        <PixelStrip />
       </section>
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">

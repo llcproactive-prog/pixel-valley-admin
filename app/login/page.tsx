@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { PixelMark, PixelStrip } from "@/components/brand";
+import { Logo, PixelStrip } from "@/components/brand";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -39,12 +39,9 @@ export default function LoginPage() {
       <div className="flex flex-1 items-center justify-center px-4">
       <div className="w-full max-w-sm overflow-hidden rounded-2xl bg-white shadow-xl">
         <div className="flex flex-col gap-4 p-6">
-        <div className="flex items-center gap-3">
-          <PixelMark className="h-12 w-12" />
-          <div>
-            <div className="font-heading text-lg font-bold leading-tight text-coastal-700">Pixel Valley</div>
-            <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-aqua">Painting · Admin</div>
-          </div>
+        <div className="flex flex-col items-center gap-2 pb-2">
+          <Logo variant="full" className="h-auto w-48" priority />
+          <span className="rounded-md bg-coastal-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.2em] text-coastal-700">Admin</span>
         </div>
         <div className="mb-2">
           <h1 className="text-2xl font-bold">Sign in</h1>

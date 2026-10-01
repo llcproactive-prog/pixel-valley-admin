@@ -1,29 +1,22 @@
-import { MARK_COLORS, MARK_GRID, MARK_OUTLINE, STRIP } from "@/lib/brand";
+import Image from "next/image";
+import { LOGO, STRIP_COLORS } from "@/lib/brand";
 
-export function PixelMark({ className = "h-8 w-8", outline = "#0d3b66" }: { className?: string; outline?: string }) {
-  return (
-    <svg viewBox="0 0 64 64" className={className} role="img" aria-label="Pixel Valley Painting">
-      <path d={MARK_OUTLINE} fill="none" stroke={outline} strokeWidth="3.5" strokeLinejoin="round" />
-      <g transform="translate(16 30)">
-        {MARK_GRID.map((row, r) =>
-          row.map((c, i) =>
-            c === 0 ? null : (
-              <rect key={`${r}-${i}`} x={i * 5.2} y={r * 4.4} width={4.4} height={3.6} rx={0.6} fill={MARK_COLORS[c]} />
-            ),
-          ),
-        )}
-      </g>
-    </svg>
-  );
+type Variant = keyof typeof LOGO;
+
+export function Logo({ variant = "full", className, priority }: { variant?: Variant; className?: string; priority?: boolean }) {
+  const l = LOGO[variant];
+  return <Image src={l.src} width={l.width} height={l.height} alt="Pixel Valley Painting" className={className} priority={priority} />;
 }
 
 export function PixelStrip({ className = "" }: { className?: string }) {
-  const cells = Array.from({ length: 72 }, (_, i) => STRIP[i % STRIP.length]);
+  const cells = 72;
   return (
     <div aria-hidden className={`flex h-1.5 w-full ${className}`}>
-      {cells.map((c, i) => (
-        <span key={i} className="h-full flex-1" style={{ background: MARK_COLORS[c] }} />
-      ))}
+      {Array.from({ length: cells }, (_, i) => {
+        const band = Math.min(Math.floor((i / cells) * 3), 2);
+        const scatter = (i * 7) % 11 === 0 && band > 0 ? band - 1 : band;
+        return <span key={i} className="h-full flex-1" style={{ background: STRIP_COLORS[scatter] }} />;
+      })}
     </div>
   );
 }
